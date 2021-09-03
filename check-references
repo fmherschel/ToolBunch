@@ -1,0 +1,112 @@
+#!/usr/bin/perl
+
+use strict;
+use Getopt::Long;
+# use File::Path;
+
+my %refs;
+my %defs;
+my @files;
+my $count=0;
+my $id="[a-zA-Z_0-9]+";
+my $multiLineComment="\/\/\/\/";
+my $filterMultiLines=0;
+my $help=0;
+
+# list all valiable references in an adoc file
+# for first we do NOT process includes
+
+sub init()
+{
+    my $result = GetOptions (
+           "file=s" => \@files,
+           "help" => \$help,
+         );
+   return 0;
+}
+
+init();
+
+
+my $file;
+for $file ( @files ) {
+    printf "process file %s\n", $file ;
+    open(ADOC, "<", $file);
+    while (<ADOC>) {
+        chomp;
+        if ( /^$multiLineComment/ ) {
+            if ( $filterMultiLines == 0 ) {
+                $filterMultiLines = 1;
+            } else {
+                $filterMultiLines = 0;
+            }
+        }
+        
+        if (( /^\/\// ) || ( $filterMultiLines == 1 )) {
+            if ( $filterMultiLines == 1 ) {
+                # printf "skip: %s\n", $_;
+            }
+            #
+            # filter comment lines ( // at the begin of the line )
+            # 
+        }  else {
+            if ( /include::(.*)\[/ ) { # match of ...include::... found
+                #
+                # found a include file
+                #
+                $count++;
+                push(@files, $1);
+            } 
+            my $restOfLine = $_;
+            my $refCountLine = 0;
+            while ( $restOfLine =~ /\{($id)\}(.*)/ ) {
+    printf ".";
+                #
+                # found a variable reference
+                # for first we try to match only one occurance per line
+                #
+                my $fRef = lc($1);
+                $refs{$fRef} = $fRef;
+                $restOfLine = $2; 
+                $refCountLine++;
+            }
+    if ( $refCountLine > 0 ) {
+       printf "\n";
+    }
+            if ( /^:($id):/ ) { # match of ...:something:... found
+                #
+                # found a variable definition
+                # for first we try to match only one occurance per line
+                # TODO: Check, if definition is always at the beginning of a line
+                #
+                my $fDef = lc($1);
+                if ( defined( $defs{$fDef} )) {
+                    printf "redundant definition: %s\n", $fDef;
+                } else {
+                    $defs{$fDef} = $fDef;
+                }
+            }
+        }
+    }
+    close(ADOC);
+}
+
+my $key;
+for $key ( sort(keys(%refs))) {
+    #printf "ref: %s\n", $key
+}
+
+my $f;
+for $f (@files) {
+    #printf "file: %s\n", $f;
+}
+
+for $key ( sort(keys(%defs))) {
+    #printf "def: %s\n", $key
+}
+
+for $key ( sort(keys(%refs))) {
+    if ( !(defined $defs{$key} )) {
+        printf "missing def: %s\n", $key
+    }
+}
