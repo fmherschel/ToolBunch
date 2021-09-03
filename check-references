@@ -60,7 +60,6 @@ for $file ( @files ) {
             my $restOfLine = $_;
             my $refCountLine = 0;
             while ( $restOfLine =~ /\{($id)\}(.*)/ ) {
-    printf ".";
                 #
                 # found a variable reference
                 # for first we try to match only one occurance per line
@@ -70,9 +69,6 @@ for $file ( @files ) {
                 $restOfLine = $2; 
                 $refCountLine++;
             }
-    if ( $refCountLine > 0 ) {
-       printf "\n";
-    }
             if ( /^:($id):/ ) { # match of ...:something:... found
                 #
                 # found a variable definition
